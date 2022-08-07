@@ -145,13 +145,16 @@ class Client:
         self.status_panel = StatusPanel(self, self.screen.subsurface((POOL_WIDTH, 0, STATUS_PANEL_WIDTH, HEIGHT)))
         self.bubble_panel = BubblePanel(self, self.screen.subsurface((100, 0, WIDTH - 100, HEIGHT)))
 
+        self.sync_delay = 0
+
     def login(self):
         self.session.write_message({
             'action': 'login'
         })
 
     def handle_message(self, session, message):
-        print(message)
+        if message.get('action') != 'status':
+            print(message)
         match message.get('action', None):
             case 'login':
                 self.player_id = message['player_id']
@@ -192,11 +195,13 @@ class Client:
     def write_message(self, message):
         self.session.write_message(message)
 
-    def update(self, tick):
-        #return
-        self.write_message({
-            'action': 'status'
-        })
+    def update(self, tick_in_ms):
+        self.sync_delay += tick_in_ms
+        if self.sync_delay >= 1000:
+            self.sync_delay = 0
+            self.write_message({
+                'action': 'status'
+            })
 
     def draw(self):
         self.screen.fill('black')
@@ -224,27 +229,34 @@ class Client:
             status.append((player_id, self.players[player_id]['score']))
         return status
 
-SERVER_ADDRESS = ('localhost', 4444)
-screen = pygame.display.get_surface()
-client = Client(SERVER_ADDRESS, screen)
+def main(server_address):
+    screen = pygame.display.get_surface()
+    client = Client(server_address, screen)
 
-FPS = 60
-clock = pygame.time.Clock()
-running = True
+    FPS = 60
+    clock = pygame.time.Clock()
+    running = True
 
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            position = pygame.mouse.get_pos()
-            bubble = client.get_bubble_at(position)
-            if bubble:
-                client.lock_bubble(bubble)
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                position = pygame.mouse.get_pos()
+                bubble = client.get_bubble_at(position)
+                if bubble:
+                    client.lock_bubble(bubble)
 
-    tick_in_ms = clock.tick(FPS)
-    client.update(tick_in_ms)
-    client.draw()
-    pygame.display.update()
+        tick_in_ms = clock.tick(FPS)
+        client.update(tick_in_ms)
+        client.draw()
+        pygame.display.update()
 
-pygame.quit()
+    pygame.quit()
+
+if __name__ == '__main__':
+    import sys
+    if len(sys.argv) != 3:
+        print('usage: python3 client.py server_ip server_port')
+        sys.exit(1)
+    main((sys.argv[1], int(sys.argv[2])))

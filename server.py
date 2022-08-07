@@ -71,11 +71,11 @@ class BubbleManager:
 
     def start(self):
         self.is_active = True
-        self.create_bubble_thread = threading.Thread(target=self.create_bubble, args=())
+        self.create_bubble_thread = threading.Thread(target=self.create_bubble, args=(), daemon=True)
         self.create_bubble_thread.start()
-        self.expire_bubble_thread = threading.Thread(target=self.expire_bubble, args=())
+        self.expire_bubble_thread = threading.Thread(target=self.expire_bubble, args=(), daemon=True)
         self.expire_bubble_thread.start()
-        self.check_bubble_thread = threading.Thread(target=self.check_bubble, args=())
+        self.check_bubble_thread = threading.Thread(target=self.check_bubble, args=(), daemon=True)
         self.check_bubble_thread.start()
 
     def check_bubble(self):
@@ -83,7 +83,9 @@ class BubbleManager:
             now = time.time()
             bubble_ids = list(self.bubbles)
             for bubble_id in bubble_ids:
-                bubble = self.bubbles[bubble_id]
+                bubble = self.bubbles.get(bubble_id)
+                if not bubble:
+                    continue
                 if bubble['locked_by'] is None:
                     continue
                 if bubble['lock_time'] is None:
@@ -151,8 +153,9 @@ class Server:
 
         # start a thread to handle client messages    
         self.players = {}
-        self._handle_messages_thread = threading.Thread(target=self._handle_messages, args=(), daemon=True)
+        self._handle_messages_thread = threading.Thread(target=self._handle_messages, args=())
         self._handle_messages_thread.start()
+        self._handle_messages_thread.join()
 
     def bubble_added(self, bubble):
         '''
@@ -160,10 +163,7 @@ class Server:
         '''
         message = {
             'action': 'bubble_added',
-            'id': bubble['id'],
-            'position': bubble['position'],
-            'radius': bubble['radius'],
-            'color': bubble['color'],
+            **bubble,
         }
         self.broadcast(message)
 
@@ -219,6 +219,8 @@ class Server:
         return ':'.join(map(str, session.remote_address))
 
     def _handle_message(self, session, message):
+        if message['action'] != 'status':
+            logging.debug(f'{session.remote_address}: {message}')
         match message.get('action', None):
             case 'login':
                 player_id = self.create_player(session)
@@ -261,7 +263,7 @@ class Server:
         while True:
             while self.messages_from_clients:
                 session, message = self.messages_from_clients.pop(0)
-                logging.info(f'get client message: {message}')
+                #logging.info(f'get client message: {message}')
                 self._handle_message(session, message)
 
 if __name__ == '__main__':
