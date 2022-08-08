@@ -7,7 +7,7 @@ from common import Session
 
 pygame.init()
 
-STATUS_PANEL_WIDTH = 200
+STATUS_PANEL_WIDTH = 400
 WIDTH, HEIGHT = POOL_WIDTH + STATUS_PANEL_WIDTH, POOL_HEIGHT
 
 pygame.display.set_mode((WIDTH, HEIGHT))
