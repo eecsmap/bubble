@@ -268,4 +268,4 @@ class Server:
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
-    Server(4444)
+    Server(80)
