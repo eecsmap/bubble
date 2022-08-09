@@ -1,6 +1,7 @@
 import pygame
 import socket
 import random
+import time
 
 from common import BUBBLE_MAX_RADIUS, BUBBLE_MIN_RADIUS, POOL_WIDTH, POOL_HEIGHT
 from common import Session
@@ -115,6 +116,8 @@ class StatusPanel:
             text = global_font.render(f'{player_id}: {player_score}', True, 'white')
             self.surface.blit(text, position)
             position = (position[0], position[1] + 30)
+        delay_text = global_font.render(f'delay: {self.client.get_delay()}ms', True, 'white')
+        self.surface.blit(delay_text, (10, self.surface.get_height() - 30))
 
 class BubblePanel:
 
@@ -137,6 +140,7 @@ class Client:
         self.player_id = None
         self.player_score = 0
         self.players = {}
+        self.delay = 0
 
         self.login()
 
@@ -147,6 +151,9 @@ class Client:
 
         self.sync_delay = 0
 
+    def get_delay(self):
+        return int(self.delay * 1000)
+
     def login(self):
         self.session.write_message({
             'action': 'login'
@@ -156,6 +163,8 @@ class Client:
         if message.get('action') != 'status':
             print(message)
         match message.get('action', None):
+            case 'ping':
+                self.delay = time.time() - message['timestamp']
             case 'login':
                 self.player_id = message['player_id']
                 self.logged_in = True
@@ -201,6 +210,10 @@ class Client:
             self.sync_delay = 0
             self.write_message({
                 'action': 'status'
+            })
+            self.write_message({
+                'action': 'ping',
+                'timestamp': time.time()
             })
 
     def draw(self):
