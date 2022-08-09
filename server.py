@@ -274,8 +274,9 @@ class Server:
                 try:
                     self._handle_message(session, message)
                 except SessionException:
-                    for client in clients:
+                    for client in list(self.sessions):
                         if self.sessions[client] == session:
+                            logging.info(f'remove session {session} from {client}')
                             del self.sessions[client]
 
 if __name__ == '__main__':
