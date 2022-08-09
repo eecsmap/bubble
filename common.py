@@ -35,7 +35,7 @@ class Session:
         except BrokenPipeError:
             msg = f'{self.remote_address} disconnected'
             logging.info(msg)
-            raise SessionException(msg)
+            raise SessionException(msg) from None
     
     def write_message(self, message):
         self.output_messages.append(message)
@@ -48,7 +48,7 @@ class Session:
         except BrokenPipeError:
             msg = f'{self.remote_address} disconnected'
             logging.info(msg)
-            raise SessionException(msg)
+            raise SessionException(msg) from None
 
     def close(self):
         pass
