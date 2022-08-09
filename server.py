@@ -4,7 +4,7 @@ import time
 import random
 import logging
 
-from common import Session
+from common import Session, SessionException
 from common import (
     BUBBLE_MIN_LIFETIME_SEC, BUBBLE_MAX_LIFETIME_SEC,
     BUBBLE_MIN_VALUE, BUBBLE_MAX_VALUE,
@@ -54,7 +54,8 @@ class BubbleManager:
 
     def create_bubble(self):
         while self.is_active:
-            self.create_new_bubble()
+            if self.server.has_sessions():
+                self.create_new_bubble()
             time.sleep(5)
 
     def expire_bubble(self):
@@ -157,6 +158,9 @@ class Server:
         self._handle_messages_thread.start()
         self._handle_messages_thread.join()
 
+    def has_sessions(self):
+        return len(self.sessions) > 0
+
     def bubble_added(self, bubble):
         '''
         used by bubble manager to notify clients of new bubble
@@ -221,7 +225,10 @@ class Server:
     def _handle_message(self, session, message):
         if message['action'] != 'status':
             logging.debug(f'{session.remote_address}: {message}')
+
         match message.get('action', None):
+            case 'ping':
+                session.write_message(message)
             case 'login':
                 player_id = self.create_player(session)
                 if player_id in self.players:
@@ -264,7 +271,12 @@ class Server:
             while self.messages_from_clients:
                 session, message = self.messages_from_clients.pop(0)
                 #logging.info(f'get client message: {message}')
-                self._handle_message(session, message)
+                try:
+                    self._handle_message(session, message)
+                except SessionException:
+                    for client in clients:
+                        if self.sessions[client] == session:
+                            del self.sessions[client]
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)

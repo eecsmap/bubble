@@ -10,6 +10,10 @@ BUBBLE_MIN_VALUE = 1
 BUBBLE_MAX_VALUE = 20
 BUBBLE_MIN_LIFETIME_SEC, BUBBLE_MAX_LIFETIME_SEC = 3, 6
 
+
+class SessionException(Exception):
+    '''Session Exception'''
+
 class Session:
 
     def __init__(self, socket, remote_address, callback):
@@ -29,7 +33,9 @@ class Session:
                     message = self.output_messages.pop(0)
                     write_message(self.socket.send, message)
         except BrokenPipeError:
-            logging.info(f'{self.remote_address} disconnected')
+            msg = f'{self.remote_address} disconnected'
+            logging.info(msg)
+            raise SessionException(msg)
     
     def write_message(self, message):
         self.output_messages.append(message)
@@ -40,7 +46,9 @@ class Session:
                 message = read_message(self.socket.recv)
                 self.callback(self, message)
         except BrokenPipeError:
-            logging.info(f'{self.remote_address} disconnected')
+            msg = f'{self.remote_address} disconnected'
+            logging.info(msg)
+            raise SessionException(msg)
 
     def close(self):
         pass

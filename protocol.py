@@ -1,5 +1,6 @@
 import json
 import struct
+import logging
 
 def read_n_bytes(read, n):
     data = bytearray(read(n))
@@ -15,5 +16,6 @@ def read_message(read):
     return json.loads(read_n_bytes(read, size))
 
 def write_message(write, message):
+    logging.debug(f'write message: {message}')
     data = json.dumps(message).encode()
     write(struct.pack('!i', len(data)) + data)
