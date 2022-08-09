@@ -10,45 +10,55 @@ BUBBLE_MIN_VALUE = 1
 BUBBLE_MAX_VALUE = 20
 BUBBLE_MIN_LIFETIME_SEC, BUBBLE_MAX_LIFETIME_SEC = 3, 6
 
-
 class SessionException(Exception):
-    '''Session Exception'''
+    '''
+    Session exception
+    '''
 
 class Session:
 
-    def __init__(self, socket, remote_address, callback):
+    def __init__(self, socket, remote_address, read_callback, close_callback=None):
         self.socket = socket
         self.remote_address = remote_address
         self.output_messages = []
+        self.is_active = True
+        self.close_callback = close_callback
         self.write_thread = threading.Thread(target=self._write, args=(), daemon=True)
         self.write_thread.start()
-        self.callback = callback
+        self.read_callback = read_callback
         self.read_thread = threading.Thread(target=self._read, args=(), daemon=True)
         self.read_thread.start()
 
     def _write(self):
         try:
-            while True:
+            while self.is_active:
                 while self.output_messages:
                     message = self.output_messages.pop(0)
                     write_message(self.socket.send, message)
-        except BrokenPipeError:
-            msg = f'{self.remote_address} disconnected'
+        except Exception as e:
+            msg = f'{self.remote_address} disconnected with exception in write: {e}'
             logging.info(msg)
-            raise SessionException(msg) from None
+            self.close()
     
     def write_message(self, message):
-        self.output_messages.append(message)
+        if self.is_active:
+            self.output_messages.append(message)
+        else:
+            #raise SessionException()
+            logging.warning(f'session {self.remote_address} is closed')
 
     def _read(self):
         try:
-            while True:
+            while self.is_active:
                 message = read_message(self.socket.recv)
-                self.callback(self, message)
-        except BrokenPipeError:
-            msg = f'{self.remote_address} disconnected'
+                self.read_callback(self, message)
+        except Exception as e:
+            msg = f'{self.remote_address} disconnected with exception in read: {e}'
             logging.info(msg)
-            raise SessionException(msg) from None
+            self.close()
 
     def close(self):
-        pass
+        self.is_active = False
+        if self.close_callback:
+            self.close_callback(self)
+            self.close_callback = None

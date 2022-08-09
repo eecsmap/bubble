@@ -13,7 +13,9 @@ def read_message(read):
     # read message size as a four-byte integer value in network order
     size = struct.unpack('!i', read_n_bytes(read, 4))[0]
     # read message as json data
-    return json.loads(read_n_bytes(read, size))
+    message = json.loads(read_n_bytes(read, size))
+    logging.debug(f'read message: {message}')
+    return message
 
 def write_message(write, message):
     logging.debug(f'write message: {message}')
