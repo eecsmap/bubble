@@ -3,8 +3,8 @@ import socket
 import random
 import time
 
-from common import BUBBLE_MAX_RADIUS, BUBBLE_MIN_RADIUS, POOL_WIDTH, POOL_HEIGHT
-from common import Session
+from config import POOL_WIDTH, POOL_HEIGHT
+from session import Session
 
 pygame.init()
 

@@ -4,8 +4,8 @@ import time
 import random
 import logging
 
-from common import Session, SessionException
-from common import (
+from session import Session, SessionException
+from config import (
     BUBBLE_MIN_LIFETIME_SEC, BUBBLE_MAX_LIFETIME_SEC,
     BUBBLE_MIN_VALUE, BUBBLE_MAX_VALUE,
     BUBBLE_MAX_RADIUS, BUBBLE_MIN_RADIUS,
@@ -178,31 +178,38 @@ class Server:
         self.broadcast(message)
 
     def remove_session(self, session):
-        logging.debug(f'remove session {session}')
+        # do not throw exceptions here!
+        logging.debug(f'remove session of {session.remote_address}')
         self.sessions.pop(session.remote_address, None)
         for player_id in list(self.players):
             if self.players[player_id]['session'] == session:
                 logging.debug(f'remove player {player_id}')
                 self.players.pop(player_id, None)
 
+    def write_message(self, session, messasge):
+        try:
+            session.write_message(messasge)
+        except SessionException:
+            self.remove_session(session)
+
     def _accept_client(self):
         while True:
             socket, client_address = self.listen_socket.accept()
             session = Session(socket, client_address,
-                lambda session, message: self.messages_from_clients.append((session, message)),
-                lambda session: self.remove_session(session))
+                lambda session, message: self.messages_from_clients.append((session, message)))
+                #lambda session: self.remove_session(session))
             self.sessions[client_address] = session
             logging.info(f'{client_address} connected')
 
     def lock_failed(self, player_id, bubble_id):
-        self.players[player_id]['session'].write_message({
+        self.write_message(self.players[player_id]['session'], {
             'action': 'bubble_lock_failed',
             'bubble_id': bubble_id,
         })
 
     def broadcast(self, message):
         for session in list(self.sessions.values()):
-            session.write_message(message)
+            self.write_message(session, message)
 
     def lock_bubble(self, bubble_id, player_id):
         # we do not need to broadcast the unlock message
@@ -233,7 +240,7 @@ class Server:
     def _handle_message(self, session, message):
         match message.get('action', None):
             case 'ping':
-                session.write_message(message)
+                self.write_message(session, message)
             case 'login':
                 player_id = self.create_player(session)
                 if player_id in self.players:
@@ -252,7 +259,7 @@ class Server:
                     'player_id': player_id,
                     #'token': self.tokens[player_id],
                 }
-                session.write_message(message)
+                self.write_message(session, message)
             case 'lock':
                 bubble_id = message['bubble_id']
                 player_id = message['player_id']
@@ -267,7 +274,7 @@ class Server:
                 for player_id in list(self.players):
                     message['players'][player_id] = {}
                     message['players'][player_id]['score'] = self.players[player_id]['score']
-                session.write_message(message)
+                self.write_message(session, message)
 
     def _handle_messages(self):
         while True:
