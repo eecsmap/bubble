@@ -44,8 +44,9 @@ class Session:
         if self.is_active:
             self.output_messages.append(message)
         else:
-            #raise SessionException()
-            logging.warning(f'session {self.remote_address} is closed')
+            msg = f'session {self.remote_address} is closed'
+            logging.warning(msg)
+            raise SessionException(msg)
 
     def _read(self):
         try:
