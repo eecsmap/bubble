@@ -14,10 +14,10 @@ def read_message(read):
     size = struct.unpack('!i', read_n_bytes(read, 4))[0]
     # read message as json data
     message = json.loads(read_n_bytes(read, size))
-    logging.debug(f'read message: {message}')
+    pass # logging.debug(f'read message: {message}')
     return message
 
 def write_message(write, message):
-    logging.debug(f'write message: {message}')
+    pass # logging.debug(f'write message: {message}')
     data = json.dumps(message).encode()
     write(struct.pack('!i', len(data)) + data)
