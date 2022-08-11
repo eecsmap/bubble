@@ -163,6 +163,7 @@ class Server:
     def _status(self):
         while True:
             print(f'#sessions: {len(self.sessions)}, #bubbles: {len(self.bubble_manager.bubbles)}, #messages: {len(self.messages_from_clients)}\r', end='')
+            time.sleep(0.5)
 
     def has_sessions(self):
         return len(self.sessions) > 0
