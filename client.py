@@ -162,44 +162,44 @@ class Client:
     def handle_message(self, session, message):
         if message.get('action') != 'status':
             print(message)
-        match message.get('action', None):
-            case 'ping':
-                self.delay = time.time() - message['timestamp']
-            case 'login':
-                self.player_id = message['player_id']
-                self.logged_in = True
-            case 'bubble_added':
-                bubble = Bubble(message)
-                self.bubble_manager.bubbles[bubble.id] = bubble
-            case 'bubble_expired':
-                bubble_id = message['bubble_id']
-                if bubble_id in self.bubble_manager.bubbles:
-                    del self.bubble_manager.bubbles[message['bubble_id']]
-            case 'bubble_locked':
-                for bubble_id in self.bubble_manager.bubbles:
-                    bubble = self.bubble_manager.bubbles[bubble_id]
-                    if bubble_id == message['bubble_id']:
-                        bubble.locked = True
-                        bubble.locked_by_others = message['player_id'] != self.player_id
-                        bubble.locked_by = message['player_id']
-                    elif bubble.locked_by == message['player_id']:
-                        bubble.locked = False
-                        bubble.locked_by_others = False
-                        bubble.locked_by = None
+        action = message.get('action', None)
+        if action == 'ping':
+            self.delay = time.time() - message['timestamp']
+        elif action == 'login':
+            self.player_id = message['player_id']
+            self.logged_in = True
+        elif action == 'bubble_added':
+            bubble = Bubble(message)
+            self.bubble_manager.bubbles[bubble.id] = bubble
+        elif action == 'bubble_expired':
+            bubble_id = message['bubble_id']
+            if bubble_id in self.bubble_manager.bubbles:
+                del self.bubble_manager.bubbles[message['bubble_id']]
+        elif action == 'bubble_locked':
+            for bubble_id in self.bubble_manager.bubbles:
+                bubble = self.bubble_manager.bubbles[bubble_id]
+                if bubble_id == message['bubble_id']:
+                    bubble.locked = True
+                    bubble.locked_by_others = message['player_id'] != self.player_id
+                    bubble.locked_by = message['player_id']
+                elif bubble.locked_by == message['player_id']:
+                    bubble.locked = False
+                    bubble.locked_by_others = False
+                    bubble.locked_by = None
 
-            case 'bubble_unlocked':
-                pass
-            case 'bubble_consumed':
-                bubble_id = message['bubble_id']
-                del self.bubble_manager.bubbles[bubble_id]
-            case 'bubble_lock_failed':
-                pass
-            case 'heartbeat':
-                pass
-            case 'status':
-                self.players = message['players']
-            case _:
-                print('unknown message:', message)
+        elif action == 'bubble_unlocked':
+            pass
+        elif action == 'bubble_consumed':
+            bubble_id = message['bubble_id']
+            del self.bubble_manager.bubbles[bubble_id]
+        elif action == 'bubble_lock_failed':
+            pass
+        elif action == 'heartbeat':
+            pass
+        elif action == 'status':
+            self.players = message['players']
+        else:
+            print('unknown message:', message)
 
     def write_message(self, message):
         self.session.write_message(message)
