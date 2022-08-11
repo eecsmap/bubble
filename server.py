@@ -141,8 +141,9 @@ class Server:
         self.listen_socket.bind(('0.0.0.0', port))
         self.listen_socket.listen()
         
-        # start a thread to accept clients
         self.sessions = {}
+
+        # start a thread to accept clients
         self.messages_from_clients = deque()
         self._accept_client_thread = threading.Thread(target=self._accept_client, args=(), daemon=True)
         self._accept_client_thread.start()
@@ -150,11 +151,18 @@ class Server:
         self.bubble_manager = BubbleManager(self)
         self.bubble_manager.start()
 
+        self._status_thread = threading.Thread(target=self._status, args=(), daemon=True)
+        self._status_thread.start()
+
         # start a thread to handle client messages    
         self.players = {}
         self._handle_messages_thread = threading.Thread(target=self._handle_messages, args=())
         self._handle_messages_thread.start()
         self._handle_messages_thread.join()
+
+    def _status(self):
+        while True:
+            print(f'#sessions: {len(self.sessions)}, #bubbles: {len(self.bubble_manager.bubbles)}, #messages: {len(self.messages_from_clients)}\r', end='')
 
     def has_sessions(self):
         return len(self.sessions) > 0
