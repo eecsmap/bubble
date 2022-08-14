@@ -7,6 +7,7 @@ from collections import deque
 
 from session import Session, SessionException
 from config import (
+    WIN_SCORE,
     BUBBLE_MIN_LIFETIME_SEC, BUBBLE_MAX_LIFETIME_SEC,
     BUBBLE_MIN_VALUE, BUBBLE_MAX_VALUE,
     BUBBLE_MAX_RADIUS, BUBBLE_MIN_RADIUS,
@@ -236,6 +237,13 @@ class Server:
             'player_id': player_id,
         }
         self.broadcast(message)
+        # end the game if the player has reached the WIN_SCORE
+        if self.players[player_id]['score'] >= WIN_SCORE:
+            message = {
+                'action': 'game_over',
+                'winner': player_id,
+            }
+            self.broadcast(message)
 
     def try_lock(self, bubble_id, player_id):
         pass # logging.debug(f'{player_id} try_lock {bubble_id}')
@@ -287,4 +295,8 @@ class Server:
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
-    Server(80)
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--port', type=int, default=80)
+    args = parser.parse_args()
+    Server(args.port)

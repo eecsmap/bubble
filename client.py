@@ -101,9 +101,14 @@ class Client:
         self.players = {}
         self.delay = 0
 
+        self.screen = screen
+        # for game over
+        self.winner = 'Nobody'
+        self.game_over = False
+        self.font = pygame.font.Font(None, 30)
+        
         self.login()
 
-        self.screen = screen
         self.bubble_panel = BubblePanel(self.screen.subsurface((0, 0, POOL_WIDTH, POOL_HEIGHT)))
         self.status_panel = StatusPanel(self, self.screen.subsurface((POOL_WIDTH, 0, STATUS_PANEL_WIDTH, HEIGHT)))
 
@@ -148,6 +153,11 @@ class Client:
             pass
         elif action == 'status':
             self.players = message['players']
+        elif action == 'game_over':
+            self.game_over = True
+            self.winner = message['winner']
+            self.game_over_text = self.font.render(f'{self.winner} wins!', True, 'red')
+            self.game_over_position = centered(self.screen, self.game_over_text)
         else:
             print('unknown message:', message)
 
@@ -168,8 +178,11 @@ class Client:
 
     def draw(self):
         self.screen.fill('black')
-        self.status_panel.draw()
-        self.bubble_panel.draw()
+        if self.game_over:
+            self.screen.blit(self.game_over_text, self.game_over_position)
+        else:
+            self.status_panel.draw()
+            self.bubble_panel.draw()
     
     def get_bubble_at(self, pos):
         for b in self.bubble_panel.bubbles.values():
@@ -220,11 +233,24 @@ def main(server_address):
         pygame.display.update()
 
     pygame.quit()
-
+        
 if __name__ == '__main__':
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('server', nargs='?', default='localhost')
-    parser.add_argument('--port', default=80, type=int)
+    parser.add_argument('-p', '--port', default=80, type=int)
+    parser.add_argument('-s', '--self-host', action='store_true')
     args = parser.parse_args()
+
+    # if client wants to run server on its own
+    if args.self_host:
+        import threading
+        from server import Server
+        server_thread = threading.Thread(target=Server, args=(args.port,), daemon=True)
+        server_thread.start()
+        time.sleep(1) # wait for server to start
+
     main((args.server, args.port))
